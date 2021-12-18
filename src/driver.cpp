@@ -8,11 +8,11 @@
 #include <android/api-level.h>
 #include <android/log.h>
 #include <android_linker_ns.h>
-#include "hook/main_hook.h"
+#include "hook/hook_impl_params.h"
 #include <adrenotools/driver.h>
 
-void *adrenotools_open_libvulkan(int dlopenMode, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir) {
-    // Bail out if linkernsbyapss failed to load, this probably means we're on api < 28
+void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir) {
+    // Bail out if linkernsbypass failed to load, this probably means we're on api < 28
     if (!linkernsbypass_load_status())
         return nullptr;
 
@@ -47,8 +47,28 @@ void *adrenotools_open_libvulkan(int dlopenMode, int featureFlags, const char *t
             return nullptr;
     }
 
-    // Will be destroyed by the libmain_hook.so destructor on unload
-    auto *hookParam{new MainHookParam(featureFlags, tmpLibDir, hookLibDir, customDriverDir, customDriverName, fileRedirectDir)};
+    // Create a namespace that can isolate our hook from the classloader namespace
+    auto hookNs{android_create_namespace("adrenotools-libvulkan", hookLibDir, nullptr, ANDROID_NAMESPACE_TYPE_SHARED, nullptr, nullptr)};
 
-    return linkernsbypass_dlopen_unique_hooked("/system/lib64/libvulkan.so", tmpLibDir, dlopenMode, hookLibDir, "libmain_hook.so", nullptr, true, reinterpret_cast<void *>(hookParam));
+    // Link it to the default namespace so the hook can use libandroid etc
+    if (!linkernsbypass_link_namespace_to_default_all_libs(hookNs))
+        return nullptr;
+
+    // Preload the hook implementation, otherwise we get a weird issue where despite being in NEEDED of the hook lib the hook's symbols will overwrite ours and cause an infinite loop
+    auto hookImpl{linkernsbypass_namespace_dlopen("libhook_impl.so", RTLD_NOW, hookNs)};
+    if (!hookImpl)
+        return nullptr;
+
+    // Pass parameters to the hook implementation
+    auto initHookParam{reinterpret_cast<void (*)(const void *)>(dlsym(hookImpl, "init_hook_param"))};
+    if (!initHookParam)
+        return nullptr;
+
+    initHookParam(new HookImplParams(featureFlags, tmpLibDir, hookLibDir, customDriverDir, customDriverName, fileRedirectDir));
+
+    // Load the libvulkan hook into the isolated namespace
+    if (!linkernsbypass_namespace_dlopen("libmain_hook.so", RTLD_GLOBAL, hookNs))
+        return nullptr;
+
+    return linkernsbypass_namespace_dlopen_unique("/system/lib64/libvulkan.so", tmpLibDir, dlopenFlags, hookNs);
 }

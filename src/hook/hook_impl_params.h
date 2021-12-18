@@ -7,10 +7,10 @@
 #include <adrenotools/priv.h>
 
 /**
- * @brief Holds the parameters for the main libvulkan.so hook
+ * @brief Holds the parameters needed for all hooks
  * @note See comments for adrenotools_open_libvulkan as a reference for member variables
  */
-struct MainHookParam {
+struct HookImplParams {
     int featureFlags;
     std::string tmpLibDir;
     std::string hookLibDir;
@@ -18,7 +18,8 @@ struct MainHookParam {
     std::string customDriverName;
     std::string fileRedirectDir;
 
-    MainHookParam(int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir)
+    HookImplParams(int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir,
+				   const char *customDriverName, const char *fileRedirectDir)
         : featureFlags(featureFlags),
           tmpLibDir(tmpLibDir ? tmpLibDir : ""),
           hookLibDir(hookLibDir),

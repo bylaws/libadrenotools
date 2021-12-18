@@ -4,11 +4,8 @@ if(NOT ${CMAKE_ANDROID_ARCH_ABI} STREQUAL arm64-v8a)
 	message(FATAL_ERROR "Unsupported target architecture: ${CMAKE_ANDROID_ARCH_ABI}. Please make an issue on the repo!")
 endif()
 
-project(adrenotools LANGUAGES CXX)
+project(adrenotools LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 17)
-
-include_directories(lib/linkernsbypass)
 add_subdirectory(lib/linkernsbypass)
 
 set(LIB_SOURCES src/bcenabler.cpp
