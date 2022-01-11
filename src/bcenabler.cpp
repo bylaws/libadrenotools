@@ -8,8 +8,8 @@
 #include <adrenotools/bcenabler.h>
 #include "gen/bcenabler_patch.h"
 
-enum adrenotools_bcn_type adrenotools_get_bcn_type(uint32_t major, uint32_t minor) {
-    if (major != 512)
+enum adrenotools_bcn_type adrenotools_get_bcn_type(uint32_t major, uint32_t minor, uint32_t vendorId) {
+    if (vendorId != 0x5143 || major != 512)
         return ADRENOTOOLS_BCN_INCOMPATIBLE;
 
     if (minor >= 514)

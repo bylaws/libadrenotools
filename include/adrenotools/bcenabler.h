@@ -24,8 +24,9 @@ enum adrenotools_bcn_type {
  * @brief Checks the status of BCn support in the supplied driver
  * @param major The major part of VkPhysicalDeviceProperties::driverVersion
  * @param minor The minor part of VkPhysicalDeviceProperties::driverVersion
+ * @param vendorId VkPhysicalDeviceProperties::vendorId
  */
-enum adrenotools_bcn_type adrenotools_get_bcn_type(uint32_t major, uint32_t minor);
+enum adrenotools_bcn_type adrenotools_get_bcn_type(uint32_t major, uint32_t minor, uint32_t vendorId);
 
 /**
  * @brief Patches the Adreno graphics driver to enable support for BCn compressed formats
