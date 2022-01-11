@@ -16,7 +16,6 @@ const HookImplParams *hook_params; //!< Bunch of info needed to load/patch the d
 
 __attribute__((visibility("default"))) void init_hook_param(const void *param) {
     hook_params = reinterpret_cast<const HookImplParams *>(param);
-    LOGI("SET %p", param);
 }
 
 __attribute__((visibility("default"))) void *hook_android_dlopen_ext(const char *filename, int flags, const android_dlextinfo *extinfo) {
@@ -108,7 +107,7 @@ __attribute__((visibility("default"))) FILE *hook_fopen(const char *filename, co
         LOGI("hook_fopen: passthrough: %s", filename);
         return fopen(filename, mode);
     }
-    LOGI("LET %p", hook_params);
+
     auto replacement{hook_params->fileRedirectDir + filename};
     LOGI("hook_fopen: %s -> %s", filename, replacement.c_str());
 
