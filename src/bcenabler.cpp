@@ -37,6 +37,10 @@ static void *find_free_page(uintptr_t address) {
     return nullptr;
 }
 
+static void *align_ptr(void *ptr) {
+    return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) & ~(PAGE_SIZE - 1));
+}
+
 bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
     union Branch {
         struct {
@@ -47,6 +51,21 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
         uint32_t raw{};
     };
     static_assert(sizeof(Branch) == 4, "Branch size is invalid");
+
+    // Find the nearest unmapped page where we can place patch code
+    void *patchPage{find_free_page(reinterpret_cast<uintptr_t>(vkGetPhysicalDeviceFormatPropertiesFn))};
+    if (!patchPage)
+        return false;
+
+    // Map patch region
+    void *ptr{mmap(patchPage, PAGE_SIZE,  PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0)};
+    if (ptr != patchPage)
+        return false;
+
+    // Allow reading from the blob's .text section since some devices enable ---X
+    // Protect two pages just in case we happen to land on a page boundary
+    if (mprotect(align_ptr(vkGetPhysicalDeviceFormatPropertiesFn), PAGE_SIZE * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
+        return false;
 
     // First branch in this function is targeted at the function we want to patch
     Branch *blInst{reinterpret_cast<Branch *>(vkGetPhysicalDeviceFormatPropertiesFn)};
@@ -60,6 +79,11 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
     // Internal QGL format conversion function that we need to patch
     uint32_t *convFormatFn{reinterpret_cast<uint32_t *>(blInst) + blInst->offset};
 
+    // See mprotect call above
+    // This time we also set PROT_WRITE so we can write our patch to the page
+    if (mprotect(align_ptr(convFormatFn), PAGE_SIZE * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
+        return false;
+
     // This would normally set the default result to 0 (error) in the format not found case
     constexpr uint32_t ClearResultSignature{0x2a1f03e0};
 
@@ -67,15 +91,6 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
     uint32_t *clearResultPtr{convFormatFn};
     while (*clearResultPtr != ClearResultSignature)
         clearResultPtr++;
-
-    // Find the nearest unmapped page where we can place patch code
-    void *patchPage{find_free_page(reinterpret_cast<uintptr_t>(clearResultPtr))};
-    if (!patchPage)
-        return false;
-
-    void *ptr{mmap(patchPage, PAGE_SIZE,  PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0)};
-    if (ptr != patchPage)
-        return false;
 
     // Ensure we don't write out of bounds
     if (PatchRawData_size > PAGE_SIZE)
@@ -88,14 +103,14 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
     constexpr uint32_t PatchReturnFixupMagic{0xffffffff};
     constexpr uint8_t BranchSignature{0x5};
 
-    uint32_t *fixupTargetPtr = clearResultPtr + 1;
-    uint32_t *fixupPtr = reinterpret_cast<uint32_t *>(patchPage);
+    uint32_t *fixupTargetPtr{clearResultPtr + 1};
+    auto *fixupPtr{reinterpret_cast<uint32_t *>(patchPage)};
     for (long unsigned int i{}; i < (PatchRawData_size / sizeof(uint32_t)); i++, fixupPtr++) {
         if (*fixupPtr == PatchReturnFixupMagic) {
             Branch branchToDriver{
                 {
-                   .offset = static_cast<int32_t>((reinterpret_cast<intptr_t>(fixupTargetPtr) - reinterpret_cast<intptr_t>(fixupPtr)) / sizeof(int32_t)),
-                   .sig = BranchSignature,
+                    .offset = static_cast<int32_t>((reinterpret_cast<intptr_t>(fixupTargetPtr) - reinterpret_cast<intptr_t>(fixupPtr)) / sizeof(int32_t)),
+                    .sig = BranchSignature,
                 }
             };
 
@@ -109,12 +124,6 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
             .sig = BranchSignature,
         }
     };
-
-    void *driverPatchPage{reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(clearResultPtr) & ~(PAGE_SIZE - 1))};
-
-    // For some reason mprotect just breaks entirely after we patch the QGL instruction so just set perms to RWX
-    if (mprotect(driverPatchPage, PAGE_SIZE,  PROT_WRITE | PROT_READ | PROT_EXEC))
-        return false;
 
     *clearResultPtr = branchToPatch.raw;
 
