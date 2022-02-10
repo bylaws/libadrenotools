@@ -1,0 +1,34 @@
+cc_defaults {
+    name: "shim_defaults",
+
+    srcs: [
+        "shim.cpp",
+    ],
+
+    shared_libs: [
+        "liblog",
+        "libcutils",
+        "libhidlbase",
+        "libhardware",
+        "libutils",
+    ],
+    cflags: [
+        "-Wno-error",
+        "-Wno-unused-parameter",
+    ],
+}
+
+cc_library_shared {
+    name: "vendor.qti.hardware.display.mapperstub",
+    defaults: ["shim_defaults"],
+}
+
+cc_library_shared {
+    name: "vendor.qti.hardware.display.mapperextensionsstub",
+    defaults: ["shim_defaults"],
+}
+
+cc_library_shared {
+    name: "android.hardware.graphics.mapperstub",
+    defaults: ["shim_defaults"],
+}
