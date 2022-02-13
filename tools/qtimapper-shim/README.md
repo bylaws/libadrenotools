@@ -12,8 +12,8 @@ The code is fairly ugly but functional enough for the purpose, some functions ar
 
 Chuck into a lineage tree, then:
 ```
-make vendor.qti.hardware.display.mapperstub
-make vendor.qti.hardware.display.mapperextensionsstub
-make android.hardware.graphics.mapperstub
+make vendor.qti.hardware.display.mappershim
+make vendor.qti.hardware.display.mapperextensionsshim
+make android.hardware.graphics.mappershim
 ```
 and grab SOs out of outputs dir

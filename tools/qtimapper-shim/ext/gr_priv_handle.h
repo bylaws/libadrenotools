@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -20,39 +20,28 @@
 #ifndef __GR_PRIV_HANDLE_H__
 #define __GR_PRIV_HANDLE_H__
 
-#include <errno.h>
-#include <log/log.h>
 #include <hardware/gralloc.h>
 #include <hardware/gralloc1.h>
+#include <log/log.h>
+#ifdef __cplusplus
 #include <cinttypes>
-
-#define GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER 1
-#define GRALLOC_MODULE_PERFORM_GET_STRIDE 2
-#define GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_FROM_HANDLE 3
-#define GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_AND_HEIGHT_FROM_HANDLE 4
-#define GRALLOC_MODULE_PERFORM_GET_ATTRIBUTES 5
-#define GRALLOC_MODULE_PERFORM_GET_COLOR_SPACE_FROM_HANDLE 6
-#define GRALLOC_MODULE_PERFORM_GET_YUV_PLANE_INFO 7
-#define GRALLOC_MODULE_PERFORM_GET_MAP_SECURE_BUFFER_INFO 8
-#define GRALLOC_MODULE_PERFORM_GET_UBWC_FLAG 9
-#define GRALLOC_MODULE_PERFORM_GET_RGB_DATA_ADDRESS 10
-#define GRALLOC_MODULE_PERFORM_GET_IGC 11
-#define GRALLOC_MODULE_PERFORM_SET_IGC 12
-#define GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE 13
-#define GRALLOC1_MODULE_PERFORM_GET_BUFFER_SIZE_AND_DIMENSIONS 14
-#define GRALLOC1_MODULE_PERFORM_GET_INTERLACE_FLAG 15
-#define GRALLOC_MODULE_PERFORM_GET_GRAPHICS_METADATA 16
+#endif
 
 #define GRALLOC1_FUNCTION_PERFORM 0x00001000
 
 #define DBG_HANDLE false
 
-typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t *device, int operation, ...);
+typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t* device, int operation, ...);
 
-#define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t *>(exp)
+#define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t*>(exp)
 
 #pragma pack(push, 4)
+#ifdef __cplusplus
 struct private_handle_t : public native_handle_t {
+#else
+struct private_handle_t {
+  native_handle_t nativeHandle;
+#endif
   enum {
     PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
     PRIV_FLAGS_USES_ION = 0x00000008,
@@ -77,6 +66,7 @@ struct private_handle_t : public native_handle_t {
     PRIV_FLAGS_UBWC_ALIGNED = 0x08000000,
     PRIV_FLAGS_DISP_CONSUMER = 0x10000000,
     PRIV_FLAGS_CLIENT_ALLOCATED = 0x20000000,  // Ion buffer allocated outside of gralloc
+    PRIV_FLAGS_UBWC_ALIGNED_PI = 0x40000000,   // PI format
   };
 
   // file-descriptors dup'd over IPC
@@ -102,7 +92,7 @@ struct private_handle_t : public native_handle_t {
   uint64_t base;
   uint64_t base_metadata;
   uint64_t gpuaddr;
-
+#ifdef __cplusplus
   static const int kNumFds = 2;
   static const int kMagic = 'gmsm';
 
@@ -146,29 +136,30 @@ struct private_handle_t : public native_handle_t {
     ALOGE_IF(DBG_HANDLE, "Deleting buffer handle %p", this);
   }
 
-  static int validate(const native_handle *h) {
-    auto *hnd = static_cast<const private_handle_t *>(h);
+  static int validate(const native_handle* h) {
+    auto* hnd = static_cast<const private_handle_t*>(h);
     if (!h || h->version != sizeof(native_handle) || h->numInts != NumInts() ||
         h->numFds != kNumFds) {
-      ALOGE("Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d) ",
-          h, h ? h->version : -1, sizeof(native_handle), h ? h->numInts : -1, NumInts(),
-          h ? h->numFds : -1, kNumFds);
+      ALOGE("Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d)", h,
+            h ? h->version : -1, sizeof(native_handle), h ? h->numInts : -1, NumInts(),
+            h ? h->numFds : -1, kNumFds);
       return -EINVAL;
     }
     if (hnd->magic != kMagic) {
-       ALOGE("magic(%c%c%c%c/%c%c%c%c)",
-          hnd ? (((hnd->magic >> 24) & 0xFF) ? ((hnd->magic >> 24) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 16) & 0xFF) ? ((hnd->magic >> 16) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 8) & 0xFF) ? ((hnd->magic >> 8) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 0) & 0xFF) ? ((hnd->magic >> 0) & 0xFF) : '-') : '?',
-          (kMagic >> 24) & 0xFF, (kMagic >> 16) & 0xFF, (kMagic >> 8) & 0xFF, (kMagic >> 0) & 0xFF);
+      ALOGE("handle = %p  invalid  magic(%c%c%c%c/%c%c%c%c)", hnd,
+            hnd ? (((hnd->magic >> 24) & 0xFF) ? ((hnd->magic >> 24) & 0xFF) : '-') : '?',
+            hnd ? (((hnd->magic >> 16) & 0xFF) ? ((hnd->magic >> 16) & 0xFF) : '-') : '?',
+            hnd ? (((hnd->magic >> 8) & 0xFF) ? ((hnd->magic >> 8) & 0xFF) : '-') : '?',
+            hnd ? (((hnd->magic >> 0) & 0xFF) ? ((hnd->magic >> 0) & 0xFF) : '-') : '?',
+            (kMagic >> 24) & 0xFF, (kMagic >> 16) & 0xFF, (kMagic >> 8) & 0xFF,
+            (kMagic >> 0) & 0xFF);
       return -EINVAL;
     }
 
     return 0;
   }
 
-  static void Dump(const private_handle_t *hnd) {
+  static void Dump(const private_handle_t* hnd) {
     ALOGD("handle id:%" PRIu64
           " wxh:%dx%d uwxuh:%dx%d size: %d fd:%d fd_meta:%d flags:0x%x "
           "usage:0x%" PRIx64 "  format:0x%x layer_count: %d",
@@ -192,6 +183,7 @@ struct private_handle_t : public native_handle_t {
   uint64_t GetUsage() const { return usage; }
 
   uint64_t GetBackingstore() const { return id; }
+#endif
 };
 #pragma pack(pop)
 
