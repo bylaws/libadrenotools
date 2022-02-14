@@ -154,7 +154,7 @@ Return<void> IQtiMapperExtensions::getRgbDataAddress(void* buffer, getRgbDataAdd
                  : Error::NONE;
   _hidl_cb(err, rgb_data);
 
-  ALOGE("%s: err: %d rgb_data: %p", __func__, err, rgb_data);
+  ALOGV("%s: err: %d rgb_data: %p", __func__, err, rgb_data);
   return Void();
 }
 
@@ -166,7 +166,7 @@ Return<void> IQtiMapperExtensions::getInterlacedFlag(void* buffer, getInterlaced
                  ? Error::BAD_BUFFER
                  : Error::NONE;
   _hidl_cb(err, flag);
-  ALOGE("%s: err: %d flag: %d", __func__, err, flag);
+  ALOGV("%s: err: %d flag: %d", __func__, err, flag);
   return Void();
 }
 Return<void> IQtiMapperExtensions::getFd(void* buffer, getFd_cb hidl_cb) {
@@ -178,7 +178,7 @@ Return<void> IQtiMapperExtensions::getFd(void* buffer, getFd_cb hidl_cb) {
     fd = hnd->fd;
   }
   hidl_cb(err, fd);
-  ALOGE("%s: fd: %d", __func__, fd);
+  ALOGV("%s: fd: %d", __func__, fd);
   return Void();
 }
 
@@ -191,7 +191,7 @@ Return<void> IQtiMapperExtensions::getWidth(void* buffer, getWidth_cb hidl_cb) {
     width = hnd->width;
   }
   hidl_cb(err, width);
-  ALOGE("%s: width: %d", __func__, width);
+  ALOGV("%s: width: %d", __func__, width);
   return Void();
 }
 
@@ -204,7 +204,7 @@ Return<void> IQtiMapperExtensions::getHeight(void* buffer, getHeight_cb hidl_cb)
     height = hnd->height;
   }
   hidl_cb(err, height);
-  ALOGE("%s: height: %d", __func__, height);
+  ALOGV("%s: height: %d", __func__, height);
   return Void();
 }
 
@@ -218,7 +218,7 @@ Return<void> IQtiMapperExtensions::getFormat(void* buffer, getFormat_cb hidl_cb)
   }
   hidl_cb(err, format);
 
-  ALOGE("%s: format: %d", __func__, format);
+  ALOGV("%s: format: %d", __func__, format);
   return Void();
 }
 
@@ -231,7 +231,7 @@ Return<void> IQtiMapperExtensions::getPrivateFlags(void* buffer, getPrivateFlags
     flags = hnd->flags;
   }
   hidl_cb(err, flags);
-  ALOGE("%s: flags: %d", __func__, flags);
+  ALOGV("%s: flags: %d", __func__, flags);
   return Void();
 }
 
@@ -245,7 +245,7 @@ Return<void> IQtiMapperExtensions::getUnalignedWidth(void* buffer, getUnalignedW
   }
   hidl_cb(err, unaligned_width);
 
-  ALOGE("%s: unaligned_width: %u", __func__, unaligned_width);
+  ALOGV("%s: unaligned_width: %u", __func__, unaligned_width);
   return Void();
 }
 
@@ -258,7 +258,7 @@ Return<void> IQtiMapperExtensions::getUnalignedHeight(void* buffer, getUnaligned
     unaligned_height = hnd->unaligned_height;
   }
   hidl_cb(err, unaligned_height);
-  ALOGE("%s: unaligned_height: %u", __func__, unaligned_height);
+  ALOGV("%s: unaligned_height: %u", __func__, unaligned_height);
   return Void();
 }
 
@@ -271,7 +271,7 @@ Return<void> IQtiMapperExtensions::getLayerCount(void* buffer, getLayerCount_cb 
     layer_count = hnd->layer_count;
   }
   hidl_cb(err, layer_count);
-  ALOGE("%s: layer_count: %u", __func__, layer_count);
+  ALOGV("%s: layer_count: %u", __func__, layer_count);
   return Void();
 }
 
@@ -284,7 +284,7 @@ Return<void> IQtiMapperExtensions::getId(void* buffer, getId_cb hidl_cb) {
     id = hnd->id;
   }
   hidl_cb(err, id);
-  ALOGE("%s: id: %" PRIu64, __func__, id);
+  ALOGV("%s: id: %" PRIu64, __func__, id);
   return Void();
 }
 
@@ -297,7 +297,7 @@ Return<void> IQtiMapperExtensions::getUsageFlags(void* buffer, getUsageFlags_cb 
     usage = hnd->usage;
   }
   hidl_cb(err, usage);
-  ALOGE("%s: usage: %" PRIu64, __func__, usage);
+  ALOGV("%s: usage: %" PRIu64, __func__, usage);
 
   return Void();
 }
@@ -311,7 +311,7 @@ Return<void> IQtiMapperExtensions::getSize(void* buffer, getSize_cb hidl_cb) {
     size = hnd->size;
   }
   hidl_cb(err, size);
-  ALOGE("%s: size: %u", __func__, size);
+  ALOGV("%s: size: %u", __func__, size);
   return Void();
 }
 
@@ -324,7 +324,7 @@ Return<void> IQtiMapperExtensions::getOffset(void* buffer, getOffset_cb hidl_cb)
     offset = hnd->offset;
   }
   hidl_cb(err, offset);
-  ALOGE("%s: offset: %u", __func__, offset);
+  ALOGV("%s: offset: %u", __func__, offset);
   return Void();
 }
 
