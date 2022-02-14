@@ -36,9 +36,6 @@
 #include <log/log.h>
 #include <utils/NativeHandle.h>
 #include <utils/misc.h>
-
-#define SHIM_MODE 1
-
 #include "ext/common.h"
 #include "ext/gr_utils.h"
 #include "ext/mapper.h"
@@ -46,6 +43,16 @@
 
 using namespace android::hardware;
 using namespace android;
+
+// These two functions are used by the blob and aren't present on Q so weakly stub them
+extern "C" uint64_t __attribute__((weak)) atrace_get_enabled_tags() {
+    return 0;
+}
+
+
+namespace android::hardware::details {
+    void __attribute__((weak)) return_status::onValueRetrieval() const {}
+}
 
 bool IBase::isRemote() const {
   return false;
