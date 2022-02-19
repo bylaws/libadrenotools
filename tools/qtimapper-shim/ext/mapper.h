@@ -60,9 +60,7 @@ struct IMapper : public IBase {
     int32_t height __attribute__((aligned(4)));
   };
 
-#ifdef SHIM_MODE
   static sp<IMapper> getService(const std::string& /* serviceName */, const bool /* getStub */);
-#endif
 };
 
 }  // namespace V2_0

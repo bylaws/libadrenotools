@@ -30,12 +30,14 @@
 #define LOG_TAG "qtimapper-shim"
 
 #include <android/hidl/base/1.0/BpHwBase.h>
+#include <dlfcn.h>
 #include <hidl/HidlSupport.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 #include <log/log.h>
 #include <utils/NativeHandle.h>
 #include <utils/misc.h>
+
 #include "ext/common.h"
 #include "ext/gr_utils.h"
 #include "ext/mapper.h"
@@ -46,36 +48,117 @@ using namespace android;
 
 // These two functions are used by the blob and aren't present on Q so weakly stub them
 extern "C" uint64_t __attribute__((weak)) atrace_get_enabled_tags() {
-    return 0;
+  return 0;
 }
-
 
 namespace android::hardware::details {
-    void __attribute__((weak)) return_status::onValueRetrieval() const {}
-}
+void __attribute__((weak)) return_status::onValueRetrieval() const {}
+}  // namespace android::hardware::details
 
 bool IBase::isRemote() const {
   return false;
 }
 
+sp<graphics::mapper::V2_0::IMapper> (*Mapper20GetService)(const std::string&, const bool);
+sp<graphics::mapper::V3_0::IMapper> (*Mapper30GetService)(const std::string&, const bool);
+sp<graphics::mapper::V4_0::IMapper> (*Mapper40GetService)(const std::string&, const bool);
+
+Return<sp<vendor::qti::hardware::display::mapper::V2_0::IQtiMapper>> (*QtiMapper20CastFrom)(
+    const sp<graphics::mapper::V2_0::IMapper>&, bool);
+Return<sp<vendor::qti::hardware::display::mapper::V3_0::IQtiMapper>> (*QtiMapper30CastFrom)(
+    const sp<graphics::mapper::V3_0::IMapper>&, bool);
+Return<sp<vendor::qti::hardware::display::mapper::V4_0::IQtiMapper>> (*QtiMapper40CastFrom)(
+    const sp<graphics::mapper::V4_0::IMapper>&, bool);
+
+Return<sp<vendor::qti::hardware::display::mapperextensions::V1_1::IQtiMapperExtensions>> (
+    *MapperExtensions11CastFrom)(
+    const sp<vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions>&, bool);
+
+__attribute__((constructor)) static void initShim() {
+  void* qtiMapper40Hnd =
+      dlopen("vendor.qti.hardware.display.mapper@4.0.so", RTLD_LAZY | RTLD_LOCAL);
+  if (qtiMapper40Hnd) {
+    void* mapper40Hnd = dlopen("android.hardware.graphics.mapper@4.0.so", RTLD_LAZY | RTLD_LOCAL);
+    if (mapper40Hnd) {
+      Mapper40GetService = reinterpret_cast<decltype(Mapper40GetService)>(
+          dlsym(mapper40Hnd,
+                "_ZN7android8hardware8graphics6mapper4V4_07IMapper10getServiceERKNSt3__112basic_"
+                "stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEb"));
+      QtiMapper40CastFrom = reinterpret_cast<decltype(QtiMapper40CastFrom)>(dlsym(
+          qtiMapper40Hnd,
+          "_ZN6vendor3qti8hardware7display6mapper4V4_010IQtiMapper8castFromERKN7android2spINS6_"
+          "8hardware8graphics6mapper4V4_07IMapperEEEb"));
+
+      ALOGD("%s: Mapper 4.0 present", __func__);
+    }
+  }
+
+  void* qtiMapper30Hnd =
+      dlopen("vendor.qti.hardware.display.mapper@3.0.so", RTLD_LAZY | RTLD_LOCAL);
+  if (qtiMapper30Hnd) {
+    void* mapper30Hnd = dlopen("android.hardware.graphics.mapper@3.0.so", RTLD_LAZY | RTLD_LOCAL);
+    if (mapper30Hnd) {
+      Mapper30GetService = reinterpret_cast<decltype(Mapper30GetService)>(
+          dlsym(mapper30Hnd,
+                "_ZN7android8hardware8graphics6mapper4V3_07IMapper10getServiceERKNSt3__112basic_"
+                "stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEb"));
+      QtiMapper30CastFrom = reinterpret_cast<decltype(QtiMapper30CastFrom)>(dlsym(
+          qtiMapper30Hnd,
+          "_ZN6vendor3qti8hardware7display6mapper4V3_010IQtiMapper8castFromERKN7android2spINS6_"
+          "8hardware8graphics6mapper4V3_07IMapperEEEb"));
+      ALOGD("%s: Mapper 3.0 present", __func__);
+    }
+  }
+
+  void* qtiMapper20Hnd =
+      dlopen("vendor.qti.hardware.display.mapper@2.0.so", RTLD_LAZY | RTLD_LOCAL);
+  if (qtiMapper20Hnd) {
+    void* mapper20Hnd = dlopen("android.hardware.graphics.mapper@2.0.so", RTLD_LAZY | RTLD_LOCAL);
+    if (mapper20Hnd) {
+      Mapper20GetService = reinterpret_cast<decltype(Mapper20GetService)>(
+          dlsym(mapper20Hnd,
+                "_ZN7android8hardware8graphics6mapper4V2_07IMapper10getServiceERKNSt3__112basic_"
+                "stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEb"));
+      QtiMapper20CastFrom = reinterpret_cast<decltype(QtiMapper20CastFrom)>(dlsym(
+          qtiMapper20Hnd,
+          "_ZN6vendor3qti8hardware7display6mapper4V2_010IQtiMapper8castFromERKN7android2spINS6_"
+          "8hardware8graphics6mapper4V2_07IMapperEEEb"));
+      ALOGD("%s: Mapper 2.0 present", __func__);
+    }
+  }
+
+  void* mapperExtensions11Hnd =
+      dlopen("vendor.qti.hardware.display.mapperextensions@1.1.so", RTLD_LAZY | RTLD_LOCAL);
+  if (mapperExtensions11Hnd) {
+    MapperExtensions11CastFrom = reinterpret_cast<decltype(MapperExtensions11CastFrom)>(dlsym(
+        mapperExtensions11Hnd,
+        "_ZN6vendor3qti8hardware7display16mapperextensions4V1_"
+        "120IQtiMapperExtensions8castFromERKN7android2spINS3_4V1_020IQtiMapperExtensionsEEEb"));
+    ALOGD("%s: Mapper Extensions 1.1 present", __func__);
+  }
+}
+
 namespace android::hardware::graphics::mapper {
 namespace V2_0 {
 
-sp<IMapper> IMapper::getService(const std::string& /* serviceName */, const bool /* getStub */) {
+sp<IMapper> IMapper::getService(const std::string& serviceName, const bool getStub) {
+  if (Mapper20GetService) return Mapper20GetService(serviceName, getStub);
   return nullptr;
 }
 
 }  // namespace V2_0
 namespace V3_0 {
 
-sp<IMapper> IMapper::getService(const std::string& /* serviceName */, const bool /* getStub */) {
+sp<IMapper> IMapper::getService(const std::string& serviceName, const bool getStub) {
+  if (Mapper30GetService) return Mapper30GetService(serviceName, getStub);
   return nullptr;
 }
 
 }  // namespace V3_0
 namespace V4_0 {
 
-sp<IMapper> IMapper::getService(const std::string& /* serviceName */, const bool /* getStub */) {
+sp<IMapper> IMapper::getService(const std::string& serviceName, const bool getStub) {
+  if (Mapper40GetService) return Mapper40GetService(serviceName, getStub);
   return nullptr;
 }
 
@@ -85,24 +168,28 @@ namespace vendor::qti::hardware::display {
 namespace mapper {
 namespace V4_0 {
 
-Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V4_0::IMapper>& /* parent */,
-                                            bool /* emitError */) {
+Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V4_0::IMapper>& parent,
+                                            bool emitError) {
+  if (QtiMapper40CastFrom) return QtiMapper40CastFrom(parent, emitError);
   return nullptr;
 }
 
 }  // namespace V4_0
 namespace V3_0 {
 
-Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V3_0::IMapper>& /* parent */,
-                                            bool /* emitError */) {
+Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V3_0::IMapper>& parent,
+                                            bool emitError) {
+  if (QtiMapper30CastFrom) return QtiMapper30CastFrom(parent, emitError);
   return nullptr;
 }
 
 }  // namespace V3_0
 namespace V2_0 {
 
-Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V2_0::IMapper>& /* parent */,
-                                            bool /* emitError */) {
+Return<sp<IQtiMapper>> IQtiMapper::castFrom(const sp<graphics::mapper::V2_0::IMapper>& parent,
+                                            bool emitError) {
+  if (QtiMapper20CastFrom) return QtiMapper20CastFrom(parent, emitError);
+
   return new IQtiMapper();
 }
 
@@ -110,7 +197,6 @@ Return<void> IQtiMapper::getMapperExtensions(getMapperExtensions_cb _hidl_cb) {
   sp<mapperextensions::V1_0::IQtiMapperExtensions> ext{
       new mapperextensions::V1_0::IQtiMapperExtensions()};
   _hidl_cb(graphics::mapper::V2_0::Error::NONE, ext);
-  ALOGD("IQtiMapperExtensions shim active");
   return Void();
 }
 
@@ -120,6 +206,8 @@ namespace mapperextensions {
 namespace V1_1 {
 
 IQtiMapperExtensions::IQtiMapperExtensions() {
+  ALOGI("IQtiMapperExtensions shim active");
+
   hw_module_t const* module;
   if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module)) {
     ALOGE("Failed to open gralloc module!");
@@ -142,7 +230,8 @@ IQtiMapperExtensions::IQtiMapperExtensions() {
 }
 
 Return<sp<IQtiMapperExtensions>> IQtiMapperExtensions::castFrom(
-    android::sp<V1_0::IQtiMapperExtensions> const& /* parent */, bool /* emitError */) {
+    android::sp<V1_0::IQtiMapperExtensions> const& parent, bool emitError) {
+  if (MapperExtensions11CastFrom) return MapperExtensions11CastFrom(parent, emitError);
   return new IQtiMapperExtensions();
 }
 
