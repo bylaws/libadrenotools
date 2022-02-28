@@ -77,7 +77,13 @@ __attribute__((visibility("default"))) void *hook_android_dlopen_ext(const char 
     // To fix this we would need to search /proc/self/maps for the file to a loaded instance of the library in order to read it to patch the soname and load it uniquely
     if (hook_params->featureFlags & ADRENOTOOLS_DRIVER_CUSTOM) {
         LOGI("hook_android_dlopen_ext: loading custom driver: %s%s", hook_params->customDriverDir.c_str(), hook_params->customDriverName.c_str());
-        return android_dlopen_ext(hook_params->customDriverName.c_str(), flags, &newExtinfo);
+        void *handle{android_dlopen_ext(hook_params->customDriverName.c_str(), flags, &newExtinfo)};
+        if (!handle) {
+            LOGI("hook_android_dlopen_ext: hook failed: failed to load custom driver: %s!", dlerror());
+            return fallback();
+        }
+
+        return handle;
     } else {
         LOGI("hook_android_dlopen_ext: loading default driver: %s", filename);
         return android_dlopen_ext(filename, flags, &newExtinfo);
