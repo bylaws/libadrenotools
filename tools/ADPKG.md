@@ -6,7 +6,7 @@
 - `*.so` all libraries depended on by the main driver library, these must have their sonames altered if they wish to replace the system version of the library
 
 ## Example
-`meta.json`:
+- `meta.json`:
 ```json
 {
   "schemaVersion": 1,
@@ -21,9 +21,9 @@
 }
 ```
 
-`vulkan.ad0615.so`: main patched driver
-`notadreno_utils.so`, `notdmabufheap.so`, `notgsl.so`, `notllvm-glnext.so`, `notllvm-qgl.so`: patched-soname versions of libraries specific to each driver version
-`android.hardware.graphics.mappershim.so`, `vendor.qti.hardware.display.mapperextensionsshim.so`, `vendor.qti.hardware.display.mappershim.so`: qtimapper-shim libs
+- `vulkan.ad0615.so`: main patched driver
+- `notadreno_utils.so`, `notdmabufheap.so`, `notgsl.so`, `notllvm-glnext.so`, `notllvm-qgl.so`: patched-soname versions of libraries specific to each driver version
+- `android.hardware.graphics.mappershim.so`, `vendor.qti.hardware.display.mapperextensionsshim.so`, `vendor.qti.hardware.display.mappershim.so`: qtimapper-shim libs
 
 ## Creation
 I recommend running blob-patcher.py to patch a set of blobs from a device dump with mapper ver as 5, then copying in the qtimapper-shim files from the adrenotools releases page.
