@@ -29,7 +29,7 @@
 I recommend running blob-patcher.py to patch a set of blobs from a device dump with mapper ver as 5, then copying in the qtimapper-shim files from the adrenotools releases page.
 ```bash
 $ mkdir outpkg
-$ patch.py <device dump> outpkg vulkan.adreno.so vulkan.ad0615.so 5
+$ patch.py <device dump> outpkg vulkan.adreno.so vulkan.ad0615.so 1
 $ vim outpkg/meta.json
 $ cp qtimapper-shim-rel/* outpkg
 ```
