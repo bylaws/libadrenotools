@@ -36,6 +36,11 @@ bool adrenotools_import_user_mem(adrenotools_gpu_mapping *outMapping, void *host
  */
 bool adrenotools_validate_gpu_mapping(adrenotools_gpu_mapping *mapping);
 
+/**
+ * @brief Provides a way to force the GPU to run at the maximum possible clocks (thermal constraints will still be applied)
+ */
+void adrenotools_set_turbo(bool turbo);
+
 #ifdef __cplusplus
 }
 #endif

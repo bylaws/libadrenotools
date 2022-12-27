@@ -124,3 +124,19 @@ err:
 bool adrenotools_validate_gpu_mapping(adrenotools_gpu_mapping *mapping) {
     return mapping->gpu_addr == ADRENOTOOLS_GPU_MAPPING_SUCCEEDED_MAGIC;
 }
+
+void adrenotools_set_turbo(bool turbo) {
+    uint32_t enable{turbo ? 0U : 1U};
+    kgsl_device_getproperty prop{
+        .type = KGSL_PROP_PWRCTRL,
+        .value = reinterpret_cast<void *>(&enable),
+        .sizebytes = sizeof(enable),
+    };
+
+    int kgslFd{open("/dev/kgsl-3d0", O_RDWR)};
+    if (kgslFd < 0)
+        return;
+
+    ioctl(kgslFd, IOCTL_KGSL_SETPROPERTY, &prop);
+    close (kgslFd);
+}
