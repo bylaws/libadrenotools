@@ -17,13 +17,15 @@ struct HookImplParams {
     std::string customDriverDir;
     std::string customDriverName;
     std::string fileRedirectDir;
+    adrenotools_gpu_mapping *nextGpuMapping;
 
     HookImplParams(int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir,
-				   const char *customDriverName, const char *fileRedirectDir)
+                  const char *customDriverName, const char *fileRedirectDir, adrenotools_gpu_mapping *nextGpuMapping)
         : featureFlags(featureFlags),
           tmpLibDir(tmpLibDir ? tmpLibDir : ""),
           hookLibDir(hookLibDir),
           customDriverDir(customDriverDir ? customDriverDir : ""),
           customDriverName(customDriverName ? customDriverName : ""),
-          fileRedirectDir(fileRedirectDir ? fileRedirectDir : "") {}
+          fileRedirectDir(fileRedirectDir ? fileRedirectDir : ""),
+          nextGpuMapping(nextGpuMapping) {}
 };

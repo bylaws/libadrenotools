@@ -19,7 +19,22 @@ extern "C" {
  * @param customDriverName The soname of the custom driver to load. Only used if ADRENOTOOLS_DRIVER_CUSTOM is set in `featureFlags`
  * @param fileRedirectDir The directory which to redirect all file accesses performed by the driver to. Only used if ADRENOTOOLS_DRIVER_FILE_REDIRECT is set in `featureFlags`
  */
-void *adrenotools_open_libvulkan(int dlopenMode, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir);
+void *adrenotools_open_libvulkan(int dlopenMode, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir, adrenotools_gpu_mapping *nextGpuMapping);
+
+/**
+ * @brief Imports the given CPU mapped memory range into the GSL allocator. The out_mapping should have been passed to adrenotools_open_libvulkan with ADRENOTOOLS_DRIVER_GPU_MAPPING_IMPORT set in `featureFlags`. This should then be followed by a call to vkAllocateMemory with a matching size which will return a VkDeviceMemory view over the input region
+ * @param outMapping Output mapping pointer, the same as was passed to adrenotools_open_libvulkan
+ * @param hostPtr The host pointer to import
+ * @param size The size of the region to import
+ * @return True on success
+ */
+bool adrenotools_import_user_mem(adrenotools_gpu_mapping *outMapping, void *hostPtr, uint64_t size);
+
+/**
+ * @note This function should be called after adrenotools_open_libvulkan and Vulkan driver init to check if the mapping import hook loaded successfully
+ * @return True if the mapping was successfully imported (or initialization succeeded)
+ */
+bool adrenotools_validate_gpu_mapping(adrenotools_gpu_mapping *mapping);
 
 #ifdef __cplusplus
 }

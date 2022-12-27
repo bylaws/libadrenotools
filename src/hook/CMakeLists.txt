@@ -18,3 +18,10 @@ target_compile_options(file_redirect_hook PRIVATE -Wall -Wextra)
 target_link_options(file_redirect_hook PRIVATE -z global)
 target_link_libraries(file_redirect_hook hook_impl)
 set_target_properties(file_redirect_hook PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
+add_library(gsl_alloc_hook SHARED gsl_alloc_hook.c)
+
+target_compile_options(gsl_alloc_hook PRIVATE -Wall -Wextra)
+target_link_options(gsl_alloc_hook PRIVATE -z global)
+target_link_libraries(gsl_alloc_hook hook_impl)
+set_target_properties(gsl_alloc_hook PROPERTIES CXX_VISIBILITY_PRESET hidden)
