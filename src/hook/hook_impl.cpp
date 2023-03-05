@@ -176,8 +176,7 @@ struct GslMemDesc {
 
 __attribute__((visibility("default"))) int hook_gsl_memory_alloc_pure(uint32_t size, uint32_t flags, void *memDesc) {
     auto gslMemDesc{reinterpret_cast<GslMemDesc *>(memDesc)};
-
-    if (hook_params->nextGpuMapping && hook_params->nextGpuMapping->size == size && (hook_params->nextGpuMapping->flags & flags) == flags) {
+    if (hook_params->nextGpuMapping && hook_params->nextGpuMapping->size == size && (hook_params->nextGpuMapping->flags & flags) == hook_params->nextGpuMapping->flags) {
         auto &nextMapping{*hook_params->nextGpuMapping};
 
         gslMemDesc->hostptr = nextMapping.host_ptr;
