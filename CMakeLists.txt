@@ -14,7 +14,7 @@ set(LIB_SOURCES src/bcenabler.cpp
                 include/adrenotools/driver.h
                 include/adrenotools/priv.h)
 
-add_library(adrenotools ${LIB_SOURCES})
+add_library(adrenotools SHARED ${LIB_SOURCES})
 
 target_include_directories(adrenotools PUBLIC include)
 target_include_directories(adrenotools PRIVATE .)
