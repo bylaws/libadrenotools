@@ -15,7 +15,7 @@
 #include <adrenotools/driver.h>
 #include <unistd.h>
 
-void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir, adrenotools_gpu_mapping *nextGpuMapping) {
+void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *tmpLibDir, const char *hookLibDir, const char *customDriverDir, const char *customDriverName, const char *fileRedirectDir, void **userMappingHandle) {
     // Bail out if linkernsbypass failed to load, this probably means we're on api < 28
     if (!linkernsbypass_load_status())
         return nullptr;
@@ -31,7 +31,7 @@ void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *
     if (!(featureFlags & ADRENOTOOLS_DRIVER_CUSTOM) && (customDriverDir || customDriverName))
         return nullptr;
 
-    if (!(featureFlags & ADRENOTOOLS_DRIVER_GPU_MAPPING_IMPORT) && nextGpuMapping)
+    if (!(featureFlags & ADRENOTOOLS_DRIVER_GPU_MAPPING_IMPORT) && userMappingHandle)
         return nullptr;
 
     // Verify that params for enabled features are correct
@@ -71,7 +71,19 @@ void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *
     if (!initHookParam)
         return nullptr;
 
-    initHookParam(new HookImplParams(featureFlags, tmpLibDir, hookLibDir, customDriverDir, customDriverName, fileRedirectDir, nextGpuMapping));
+
+    auto importMapping{[&]() -> adrenotools_gpu_mapping * {
+        if (featureFlags & ADRENOTOOLS_DRIVER_GPU_MAPPING_IMPORT) {
+            // This will be leaked, but it's not a big deal since it's only a few bytes
+            adrenotools_gpu_mapping *mapping{new adrenotools_gpu_mapping{}};
+            *userMappingHandle = mapping;
+            return mapping;
+        } else {
+            return nullptr;
+        }
+    }()};
+
+    initHookParam(new HookImplParams(featureFlags, tmpLibDir, hookLibDir, customDriverDir, customDriverName, fileRedirectDir, importMapping));
 
     // Load the libvulkan hook into the isolated namespace
     if (!linkernsbypass_namespace_dlopen("libmain_hook.so", RTLD_GLOBAL, hookNs))
@@ -80,12 +92,14 @@ void *adrenotools_open_libvulkan(int dlopenFlags, int featureFlags, const char *
     return linkernsbypass_namespace_dlopen_unique("/system/lib64/libvulkan.so", tmpLibDir, dlopenFlags, hookNs);
 }
 
-bool adrenotools_import_user_mem(adrenotools_gpu_mapping *outMapping, void *hostPtr, uint64_t size) {
+bool adrenotools_import_user_mem(void *handle, void *hostPtr, uint64_t size) {
+    auto importMapping{reinterpret_cast<adrenotools_gpu_mapping *>(handle)};
+
     kgsl_gpuobj_import_useraddr addr{
         .virtaddr = reinterpret_cast<uint64_t>(hostPtr),
     };
 
-    kgsl_gpuobj_import user_mem_import{
+    kgsl_gpuobj_import userMemImport{
         .priv = reinterpret_cast<uint64_t>(&addr),
         .priv_len = size,
         .flags = KGSL_CACHEMODE_WRITEBACK << KGSL_CACHEMODE_SHIFT | KGSL_MEMFLAGS_IOCOHERENT,
@@ -99,19 +113,19 @@ bool adrenotools_import_user_mem(adrenotools_gpu_mapping *outMapping, void *host
     if (kgslFd < 0)
         return false;
 
-    int ret{ioctl(kgslFd, IOCTL_KGSL_GPUOBJ_IMPORT, &user_mem_import)};
+    int ret{ioctl(kgslFd, IOCTL_KGSL_GPUOBJ_IMPORT, &userMemImport)};
     if (ret)
         goto err;
 
-    info.id = user_mem_import.id;
+    info.id = userMemImport.id;
     ret = ioctl(kgslFd, IOCTL_KGSL_GPUOBJ_INFO, &info);
     if (ret)
         goto err;
 
-    outMapping->host_ptr = hostPtr;
-    outMapping->gpu_addr = info.gpuaddr;
-    outMapping->size = size;
-    outMapping->flags = 0xc2600; //!< Unknown flags, but they are required for the mapping to work
+    importMapping->host_ptr = hostPtr;
+    importMapping->gpu_addr = info.gpuaddr;
+    importMapping->size = size;
+    importMapping->flags = 0xc2600; //!< Unknown flags, but they are required for the mapping to work
 
     close(kgslFd);
     return true;
@@ -121,8 +135,9 @@ err:
     return false;
 }
 
-bool adrenotools_validate_gpu_mapping(adrenotools_gpu_mapping *mapping) {
-    return mapping->gpu_addr == ADRENOTOOLS_GPU_MAPPING_SUCCEEDED_MAGIC;
+bool adrenotools_validate_gpu_mapping(void *handle) {
+    auto importMapping{reinterpret_cast<adrenotools_gpu_mapping *>(handle)};
+    return importMapping->gpu_addr == ADRENOTOOLS_GPU_MAPPING_SUCCEEDED_MAGIC;
 }
 
 void adrenotools_set_turbo(bool turbo) {
