@@ -17,18 +17,21 @@
 
 const HookImplParams *hook_params; //!< Bunch of info needed to load/patch the driver
 int (*gsl_memory_alloc_pure_sym)(uint32_t, uint32_t, void *);
+int (*gsl_memory_alloc_pure_64_sym)(uint64_t, uint32_t, void *);
 int (*gsl_memory_free_pure_sym)(void *);
 int kgsl_fd;
 
 using gsl_memory_alloc_pure_t = decltype(gsl_memory_alloc_pure_sym);
+using gsl_memory_alloc_pure_64_t = decltype(gsl_memory_alloc_pure_64_sym);
 using gsl_memory_free_pure_t = decltype(gsl_memory_free_pure_sym);
 
 __attribute__((visibility("default"))) void init_hook_param(const void *param) {
     hook_params = reinterpret_cast<const HookImplParams *>(param);
 }
 
-__attribute__((visibility("default"))) void init_gsl(void *alloc, void *free) {
+__attribute__((visibility("default"))) void init_gsl(void *alloc, void *alloc64, void *free) {
     gsl_memory_alloc_pure_sym = reinterpret_cast<gsl_memory_alloc_pure_t>(alloc);
+    gsl_memory_alloc_pure_64_sym = reinterpret_cast<gsl_memory_alloc_pure_64_t>(alloc64);
     gsl_memory_free_pure_sym = reinterpret_cast<gsl_memory_free_pure_t>(free);
 }
 
@@ -102,19 +105,20 @@ __attribute__((visibility("default"))) void *hook_android_dlopen_ext(const char 
 
         if (libgslHandle) {
             gsl_memory_alloc_pure_sym = reinterpret_cast<decltype(gsl_memory_alloc_pure_sym)>(dlsym(libgslHandle, "gsl_memory_alloc_pure"));
+            gsl_memory_alloc_pure_64_sym = reinterpret_cast<decltype(gsl_memory_alloc_pure_64_sym)>(dlsym(libgslHandle, "gsl_memory_alloc_pure_64"));
             gsl_memory_free_pure_sym = reinterpret_cast<decltype(gsl_memory_free_pure_sym)>(dlsym(libgslHandle, "gsl_memory_free_pure"));
-            if (gsl_memory_alloc_pure_sym && gsl_memory_free_pure_sym) {
-                auto initGsl{reinterpret_cast<void (*)(gsl_memory_alloc_pure_t, gsl_memory_free_pure_t)>(dlsym(hookImpl, "init_gsl"))};
+            if ((gsl_memory_alloc_pure_sym || gsl_memory_alloc_pure_64_sym) && gsl_memory_free_pure_sym) {
+                auto initGsl{reinterpret_cast<void (*)(gsl_memory_alloc_pure_t, gsl_memory_alloc_pure_64_t, gsl_memory_free_pure_t)>(dlsym(hookImpl, "init_gsl"))};
                 if (!initGsl)
                     return fallback();
 
-                initGsl(gsl_memory_alloc_pure_sym, gsl_memory_free_pure_sym);
+                initGsl(gsl_memory_alloc_pure_sym, gsl_memory_alloc_pure_64_sym, gsl_memory_free_pure_sym);
                 LOGI("hook_android_dlopen_ext: applied libgsl_alloc_hook");
                 hook_params->nextGpuMapping->gpu_addr = ADRENOTOOLS_GPU_MAPPING_SUCCEEDED_MAGIC;
             }
         }
 
-        if (!gsl_memory_alloc_pure_sym || !gsl_memory_free_pure_sym)
+        if (!((gsl_memory_alloc_pure_sym || gsl_memory_alloc_pure_64_sym) && gsl_memory_free_pure_sym))
             LOGI("hook_android_dlopen_ext: hook failed: failed to apply libgsl_alloc_hook!");
     }
 
@@ -174,7 +178,7 @@ struct GslMemDesc {
     uintptr_t priv;
 };
 
-__attribute__((visibility("default"))) int hook_gsl_memory_alloc_pure(uint32_t size, uint32_t flags, void *memDesc) {
+__attribute__((visibility("default"))) int hook_gsl_memory_alloc_pure_64(uint64_t size, uint32_t flags, void *memDesc) {
     auto gslMemDesc{reinterpret_cast<GslMemDesc *>(memDesc)};
     if (hook_params->nextGpuMapping && hook_params->nextGpuMapping->size == size && (hook_params->nextGpuMapping->flags & flags) == hook_params->nextGpuMapping->flags) {
         auto &nextMapping{*hook_params->nextGpuMapping};
@@ -188,7 +192,10 @@ __attribute__((visibility("default"))) int hook_gsl_memory_alloc_pure(uint32_t s
         hook_params->nextGpuMapping->gpu_addr = ADRENOTOOLS_GPU_MAPPING_SUCCEEDED_MAGIC;
         return 0;
     } else {
-        return gsl_memory_alloc_pure_sym(size, flags, gslMemDesc);
+        if (gsl_memory_alloc_pure_64_sym)
+            return gsl_memory_alloc_pure_64_sym(size, flags, gslMemDesc);
+        else
+            return gsl_memory_alloc_pure_sym((uint32_t)size, flags, gslMemDesc);
     }
 }
 
