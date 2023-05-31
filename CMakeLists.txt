@@ -19,6 +19,6 @@ add_library(adrenotools ${LIB_SOURCES})
 target_include_directories(adrenotools PUBLIC include)
 target_include_directories(adrenotools PRIVATE .)
 target_compile_options(adrenotools PRIVATE -Wall -Wextra)
-target_link_libraries(adrenotools vulkan android linkernsbypass)
+target_link_libraries(adrenotools android linkernsbypass)
 
 add_subdirectory(src/hook)
