@@ -96,11 +96,11 @@ __attribute__((visibility("default"))) void *hook_android_dlopen_ext(const char 
             return fallback();
         }
 
-        auto libgslHandle{android_dlopen_ext("libgsl.so", RTLD_NOW, &newExtinfo)};
+        auto libgslHandle{android_dlopen_ext("vkbgsl.so", RTLD_NOW, &newExtinfo)};
         if (!libgslHandle) {
             libgslHandle = android_dlopen_ext("notgsl.so", RTLD_NOW, &newExtinfo);
             if (!libgslHandle)
-                libgslHandle = android_dlopen_ext("vkbgsl.so", RTLD_NOW, &newExtinfo);
+                libgslHandle = android_dlopen_ext("libgsl.so", RTLD_NOW, &newExtinfo);
         }
 
         if (libgslHandle) {
