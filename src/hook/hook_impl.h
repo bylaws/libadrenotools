@@ -12,7 +12,7 @@ extern "C" {
 
 void init_hook_param(const void *param);
 
-void init_gsl(void *alloc, void *free);
+void init_gsl(void *alloc, void *alloc64, void *free);
 
 void *hook_android_dlopen_ext(const char *filename, int flags, const android_dlextinfo *extinfo);
 

@@ -5,6 +5,7 @@
 #include <string_view>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <android/api-level.h>
@@ -133,6 +134,58 @@ bool adrenotools_import_user_mem(void *handle, void *hostPtr, uint64_t size) {
 err:
     close(kgslFd);
     return false;
+}
+
+bool adrenotools_mem_gpu_allocate(void *handle, uint64_t *size) {
+    auto mapping{reinterpret_cast<adrenotools_gpu_mapping *>(handle)};
+
+    kgsl_gpuobj_alloc gpuobjAlloc{
+        .size = *size,
+        .flags = KGSL_CACHEMODE_WRITEBACK << KGSL_CACHEMODE_SHIFT | KGSL_MEMFLAGS_IOCOHERENT,
+    };
+
+    kgsl_gpuobj_info info{};
+
+    int kgslFd{open("/dev/kgsl-3d0", O_RDWR)};
+    if (kgslFd < 0)
+        return false;
+
+    int ret{ioctl(kgslFd, IOCTL_KGSL_GPUOBJ_ALLOC, &gpuobjAlloc)};
+    if (ret)
+        goto err;
+
+    *size = gpuobjAlloc.mmapsize;
+
+    info.id = gpuobjAlloc.id;
+
+    ret = ioctl(kgslFd, IOCTL_KGSL_GPUOBJ_INFO, &info);
+    if (ret)
+        goto err;
+
+    mapping->host_ptr = nullptr;
+    mapping->gpu_addr = info.gpuaddr;
+    mapping->size = *size;
+    mapping->flags = 0xc2600; //!< Unknown flags, but they are required for the mapping to work
+
+    close(kgslFd);
+    return true;
+
+err:
+    close(kgslFd);
+    return false;
+}
+
+
+bool adrenotools_mem_cpu_map(void *handle, void *hostPtr, uint64_t size) {
+    auto mapping{reinterpret_cast<adrenotools_gpu_mapping *>(handle)};
+
+    int kgslFd{open("/dev/kgsl-3d0", O_RDWR)};
+    if (kgslFd < 0)
+        return false;
+
+    mapping->host_ptr = mmap(hostPtr, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, kgslFd, mapping->gpu_addr);
+    close(kgslFd);
+    return mapping->host_ptr != nullptr;
 }
 
 bool adrenotools_validate_gpu_mapping(void *handle) {
