@@ -10,3 +10,21 @@ Arm64
 
 Please create an issue if support for anything else is desired.
 
+### FAQ
+
+#### Is there an example project?
+
+There is a simple bare-bones project [AdrenoToolsTest](https://github.com/darksylinc/AdrenoToolsTest) demonstrating how to get libadrenotools working.
+
+#### How do I use this to update the drivers on my phone? Where's the apk?
+
+You don't. This library is **not** for installing into Android and is **not** for end users.
+This library is aimed at other developers.
+
+Each individual app must explicitly make use of libadrenotools in order to load custom drivers into an app / game.
+
+#### How do I use this library to make \<favourite game\> use newer drivers?
+
+See previous question. It's up to the game developer to add support & use this library.
+
+You could contact them to so they add support for it; but that's out of our power.
