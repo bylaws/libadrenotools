@@ -12,11 +12,18 @@ extern "C" {
 
 /**
  * @brief Opens a new libvulkan.so instance according to `flags`
+ * @remark IMPORTANT: The app MUST be packaged w/ useLegacyPackaging = true. The reason for this is
+ * that we install the hook in hookLibDir; but this folder won't be set correctly when useLegacyPackaging == false
+ * because Android expects to read the *.so directly from the apk (instead of decompressing them into nativeLibraryDir).
  * @param dlopenMode The dlopen mode to use when opening libvulkan
  * @param featureFlags Which adrenotools driver features to enable
  * @param tmpLibDir A writable directory to hold patched libraries, only used on api < 29 due to the lack of memfd support. If nullptr is passed and the API version is < 29 memfd usage will be attempted and if unsupported nullptr will be returned
- * @param hookLibDir The directory holding the built hooks
- * @param customDriverDir The directory to load a custom GPU driver named according to `customDriverName` from. Only used if ADRENOTOOLS_DRIVER_CUSTOM is set in `featureFlags`
+ * @param hookLibDir The directory holding the built hooks.
+ * IMPORTANT: This path MUST point to whatever `getApplicationInfo().nativeLibraryDir` (Kotlin code) returns.
+ * Failing to do so will result in this function returning a valid ptr but then the hook will fail and either the original driver is loaded as fallback, or vkEnumeratePhysicalDevices returns 0 devices.
+ * @param customDriverDir The directory to load a custom GPU driver named according to `customDriverName` from. Only used if ADRENOTOOLS_DRIVER_CUSTOM is set in `featureFlags`.
+ * IMPORTANT: This path MUST NOT be on sdcard/storage. i.e. use ANativeActivity::internalDataPath and often looks like "/data/user/0/com.example.app/files/".
+ * Otherwise you will get permission denied because dlopen() can't be done on *.so libraries that any random user or application can manipulate (which would be a security risk).
  * @param customDriverName The soname of the custom driver to load. Only used if ADRENOTOOLS_DRIVER_CUSTOM is set in `featureFlags`
  * @param fileRedirectDir The directory which to redirect all file accesses performed by the driver to. Only used if ADRENOTOOLS_DRIVER_FILE_REDIRECT is set in `featureFlags`
  * @param userMappingHandle A pointer to a void* which will be set to the mapping handle if ADRENOTOOLS_DRIVER_GPU_MAPPING_IMPORT is set in `featureFlags`
