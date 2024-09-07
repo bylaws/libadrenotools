@@ -5,6 +5,7 @@
 #include <string>
 #include <cstring>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <adrenotools/bcenabler.h>
 #include "gen/bcenabler_patch.h"
 
@@ -38,7 +39,7 @@ static void *find_free_page(uintptr_t address) {
 }
 
 static void *align_ptr(void *ptr) {
-    return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) & ~(PAGE_SIZE - 1));
+    return reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) & ~(getpagesize() - 1));
 }
 
 bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
@@ -58,13 +59,13 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
         return false;
 
     // Map patch region
-    void *ptr{mmap(patchPage, PAGE_SIZE,  PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0)};
+    void *ptr{mmap(patchPage, getpagesize(),  PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0)};
     if (ptr != patchPage)
         return false;
 
     // Allow reading from the blob's .text section since some devices enable ---X
     // Protect two pages just in case we happen to land on a page boundary
-    if (mprotect(align_ptr(vkGetPhysicalDeviceFormatPropertiesFn), PAGE_SIZE * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
+    if (mprotect(align_ptr(vkGetPhysicalDeviceFormatPropertiesFn), getpagesize() * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
         return false;
 
     // First branch in this function is targeted at the function we want to patch
@@ -81,7 +82,7 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
 
     // See mprotect call above
     // This time we also set PROT_WRITE so we can write our patch to the page
-    if (mprotect(align_ptr(convFormatFn), PAGE_SIZE * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
+    if (mprotect(align_ptr(convFormatFn), getpagesize() * 2, PROT_WRITE | PROT_READ | PROT_EXEC))
         return false;
 
     // This would normally set the default result to 0 (error) in the format not found case
@@ -93,7 +94,7 @@ bool adrenotools_patch_bcn(void *vkGetPhysicalDeviceFormatPropertiesFn) {
         clearResultPtr++;
 
     // Ensure we don't write out of bounds
-    if (PatchRawData_size > PAGE_SIZE)
+    if (PatchRawData_size > getpagesize())
         return false;
 
     // Copy the patch function to our mapped page
